@@ -171,7 +171,7 @@ def test_synthetic(work):
     assert np.array_equal(h3, np.concatenate([c1["h"], c2["h"][5:]]))
     assert np.array_equal(np.diff(t3), np.full(39, 60_000_000))
 
-    report = sorted(root.glob("trilobit_report_*.txt"))[-1].read_text()
+    report = sorted(root.glob("trilobit_report_*.txt"))[-1].read_text(encoding="utf-8")
     assert "59.000 s without data filled with zeros" in report, report
     print("synthetic: OK")
 
@@ -188,7 +188,7 @@ def test_rcv(work):
     write_run(root / "0013/1stChunk", "0013_1stChunk_seq1", t0, 10, t0, t2, 4)
     write_raw(root / "0013/1stChunk", "0013_1stChunk.raw", 4711)
     log = root / "0013/1stChunk/0013_1stChunk_seq1.txt"
-    log.write_text(log.read_text().replace(f"Unit Serial Number: {rcv('0013')[1]}", "Unit Serial Number: 9999"))
+    log.write_text(log.read_text(encoding="utf-8").replace(f"Unit Serial Number: {rcv('0013')[1]}", "Unit Serial Number: 9999"))
     write_run(root / "0014/1stChunk", "0014_1stChunk_seq1", t0, 10, t0, t2, 5)
 
     scans = {s.station: s for s in core.scan_all(root)}
@@ -310,7 +310,7 @@ def test_decoded(work):
                 assert len(xa) == len(ya) and all(d >= 3600) and {(i - 3600) % 120240 for i in d} <= {176, 177}, x.name
             if "--start" in args:
                 assert fa[0].name.endswith("_20260707T160910.segy"), fa[0].name
-            rows = (a / f"full{number:04d}" / f"{number:04d}_aux_per_minute.csv").read_text().splitlines()
+            rows = (a / f"full{number:04d}" / f"{number:04d}_aux_per_minute.csv").read_text(encoding="utf-8").splitlines()
             assert rows[0] == "time_utc,acc_x,acc_y,acc_z,tilt_deg,battery_mV", rows[0]
             tilt = math.degrees(math.atan2(math.hypot(41, 3), 1053))
             assert len(rows) == 1 + 76 and rows[2] == f"2026-07-07 16:00:00,-41,-3,1053,{tilt:.3f},9601", rows[:3]

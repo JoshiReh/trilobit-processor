@@ -23,5 +23,5 @@ def write_report(root, scans, settings, results):
         for r in results:
             gap = f", {r['gap_seconds']:.3f} s without data filled with zeros" if r["gap_seconds"] else ""
             lines.append(f"  {r['station']}: {r['files']} files, {r['traces']} traces per component -> {r['folder']}{gap}")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path

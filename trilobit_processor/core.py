@@ -1,6 +1,6 @@
 """Core logic of the Trilobit processor.
 
-Same logic as the cryo-seep notebooks 0-2, as one pipeline:
+One pipeline:
 
   check    - is the EDR export of every station one continuous time series?
   fix      - repair the broken EDR binary header, rotate Galperin g1/g2/g3 -> x/y/z
@@ -575,7 +575,7 @@ def plan_station(scan, settings):
     t = start
     while t < end:
         t_end = min(t + segment_us, end)
-        # keep only windows that contain data (like the notebook: empty chunks are skipped)
+        # keep only windows that contain data (empty chunks are skipped)
         if np.searchsorted(starts, t_end, "left") > np.searchsorted(starts, t - n_samples * dt_us, "right"):
             windows.append((t, t_end))
         else:
@@ -659,7 +659,7 @@ def write_aux_csv(scan):
     path = scan.folder / f"{scan.station}_aux_per_minute.csv"
     names = list(cols)
     fmt = {"time_utc": lambda v: f"{v:%Y-%m-%d %H:%M:%S}", "tilt_deg": lambda v: f"{v:.3f}"}
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(",".join(names) + "\n")
         for row in zip(*cols.values()):
             f.write(",".join("" if (not isinstance(v, datetime) and np.isnan(v)) else fmt.get(n, lambda v: f"{v:g}")(v)

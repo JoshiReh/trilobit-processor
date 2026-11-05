@@ -1,11 +1,13 @@
-"""Trilobit Processor - Mac app (tkinter).
+"""Trilobit Processor - desktop app for macOS and Windows (tkinter).
 
 Pick the data folder (drag and drop or "Browse..."), choose the segment length,
 press "Check and process". Check, header fix, Galperin rotation and segmentation
 run in a background thread; the window only shows progress and the log.
 """
+import os
 import queue
 import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
@@ -92,7 +94,7 @@ class App:
         self.status = tk.StringVar(value="Ready.")
         ttk.Label(main, textvariable=self.status).pack(anchor="w")
 
-        self.log_box = ScrolledText(main, height=16, font=("Menlo", 11), state="disabled")
+        self.log_box = ScrolledText(main, height=16, font=("Consolas" if sys.platform == "win32" else "Menlo", 11), state="disabled")
         self.log_box.pack(fill="both", expand=True, pady=(8, 0))
         self.log(f"Trilobit Processor {__version__}")
         root.after(100, self.poll)
@@ -276,13 +278,21 @@ class App:
                 elif kind == "done":
                     self.finish(ev[1], ev[2])
                     if ev[2]:
-                        subprocess.run(["open", "-R", str(ev[2])], check=False)  # show report in Finder
+                        reveal(ev[2])
                 elif kind == "error":
                     self.finish(ev[1], None)
                     messagebox.showerror("Error", ev[1])
         except queue.Empty:
             pass
         self.root.after(100, self.poll)
+
+
+def reveal(path):
+    """Show the report in Finder / Explorer."""
+    if sys.platform == "win32":
+        subprocess.run(["explorer", "/select,", os.path.normpath(path)], check=False)
+    elif sys.platform == "darwin":
+        subprocess.run(["open", "-R", str(path)], check=False)
 
 
 def main():
