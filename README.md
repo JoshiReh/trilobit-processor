@@ -1,4 +1,4 @@
-# Trilobit Processor
+# <img src="assets/icon.png" width="48" align="center" alt=""> Trilobit Processor
 
 Turns the decoded data of a Trilobit ocean bottom node (EDR "Decode Raw") into SEG-Y files of any
 length - in one step, without the rest of EDR.
