@@ -1,15 +1,15 @@
 # Trilobit Processor - technical details
 
 Desktop app (macOS, Windows) that turns Trilobit recordings into time segments, in one go. It takes either the output of
-EDR "Decode Raw" (recommended: then EDR is only needed for the download, `fix_all_ln.ps1` and
-"Decode Raw") or SEG-Y files from EDR "Seis to SEGY":
+EDRTest208 "Decode Raw" (recommended: then EDRTest208 is only needed for the download, `fix_all_ln.ps1` and
+"Decode Raw") or SEG-Y files from EDRTest208 "Seis to SEGY":
 
-0. **Convert** (decoded files only) - does what EDR "Seis to SEGY" does: 60 s traces, clock drift
-   correction from the skew in the file header, EDR's headers. Checked against EDR byte for byte
+0. **Convert** (decoded files only) - does what EDRTest208 "Seis to SEGY" does: 60 s traces, clock drift
+   correction from the skew in the file header, EDRTest208's headers. Checked against EDRTest208 byte for byte
    (see `trilobit_processor/edr.py`); no `Trilobit_SHT`/`Trilobit_RCV`/`get_skew` needed
-1. **Check** - is every station's EDR export one continuous time series? (no gaps inside a file,
-   no gaps between exports, start/stop = EDR log, g1/g2/g3/h1 identical in time)
-2. **Fix** - repairs the broken EDR binary header and rotates the Galperin components g1/g2/g3 into x/y/z
+1. **Check** - is every station's EDRTest208 export one continuous time series? (no gaps inside a file,
+   no gaps between exports, start/stop = EDRTest208 log, g1/g2/g3/h1 identical in time)
+2. **Fix** - repairs the broken EDRTest208 binary header and rotates the Galperin components g1/g2/g3 into x/y/z
 3. **Segment** - cuts the continuous recording into segments of any length (1 h, 12 h, 24 h, 72 h, ...)
    with 60 s traces
 
@@ -22,15 +22,15 @@ deleted there.
 Any folder that contains exports, at any depth, with any folder and file names. One export = four
 files with the same name and the endings
 
-- `.g1`, `.g2`, `.g3`, `.h1` - output of EDR "Decode Raw" (unchunked, the whole recording), or
-- `.g1_segy`, `.g2_segy`, `.g3_segy`, `.h1_segy` - output of EDR "Seis to SEGY".
+- `.g1`, `.g2`, `.g3`, `.h1` - output of EDRTest208 "Decode Raw" (unchunked, the whole recording), or
+- `.g1_segy`, `.g2_segy`, `.g3_segy`, `.h1_segy` - output of EDRTest208 "Seis to SEGY".
 
-Optional: `<same name>.txt` = EDR log, and a `.raw` file in the same folder or the station folder,
+Optional: `<same name>.txt` = EDRTest208 log, and a `.raw` file in the same folder or the station folder,
 both only used by the check. A station can have one export or many (chunks). If both kinds exist
 with the same name, the decoded files are used.
 
 Decoded files contain the whole recording, including transport and deployment: set **start and end
-(UTC)** in the app. The first trace starts exactly at the start (like `Trilobit_SHT` in EDR).
+(UTC)** in the app. The first trace starts exactly at the start (like `Trilobit_SHT` in EDRTest208).
 
 ```
 <input folder>/                       e.g. several stations ...
@@ -46,17 +46,17 @@ adbasdbad_0989/                       ... or a single, unchunked station
 
 Decoded files have no station number: it is taken from the names, the 4-digit number closest to the
 file (e.g. `full0989.g1` or `0989/whatever.g1`). For SEG-Y exports the station number is read from
-the trace headers (EDR writes it from `Trilobit_RCV`), so exports are grouped by station whatever
+the trace headers (EDRTest208 writes it from `Trilobit_RCV`), so exports are grouped by station whatever
 their names. If a folder or file name contains a 4-digit number
 (e.g. `0989`), the check reports a problem when it does not match the station number in the
 headers (a `Trilobit_RCV` copied from another station).
 
 ## Output
 
-SEG-Y textual header (decoded files): EDR's `header_edr.txt` template, with client (setting, default
-UNIS), project and location (setting, default from the "Ascii Info" line of the EDR log), year,
+SEG-Y textual header (decoded files): EDRTest208's `header_edr.txt` template, with client (setting, default
+UNIS), project and location (setting, default from the "Ascii Info" line of the EDRTest208 log), year,
 component, sample interval, trace length, station, serial and the dates of the first and last segment
-filled in. A `header_edr.txt` next to the decoded files is used unchanged instead (like EDR).
+filled in. A `header_edr.txt` next to the decoded files is used unchanged instead (like EDRTest208).
 
 
 Per station a new folder in the deepest folder that contains all of its exports (e.g. `0498/`):
@@ -75,10 +75,10 @@ recording (not cut to start/end), from the aux files of "Decode Raw":
 | `battery_mV` | battery voltage (`aux1`) |
 | `aux0`, `aux2` | raw values. aux0 looks like the temperature in °C (0989: 13-15 on deck, 0-2 on the seafloor, 17-19 after recovery); aux2 unknown |
 
-EDR writes accelerometer values into its SEG-Y trace headers too (bytes 125-130, "ACC Gx/Gy/Gz (G*10000)"
+EDRTest208 writes accelerometer values into its SEG-Y trace headers too (bytes 125-130, "ACC Gx/Gy/Gz (G*10000)"
 in header_edr.txt); how it derives them from aux5 is not known, the app writes 0 there.
 
-If the check finds a problem, the app asks before processing. Recommended: export again in EDR.
+If the check finds a problem, the app asks before processing. Recommended: export again in EDRTest208.
 
 ## Use
 
@@ -107,15 +107,15 @@ python tests/test_pipeline.py /tmp/trilobit_tests [/Volumes/NilRodes/zJoshi/1069
 ```
 
 Synthetic data with the 2026 problem (59 s missing between two exports), wrong `Trilobit_RCV` values,
-any names, decoded files (decoded -> app must equal EDR SEG-Y -> app), and optionally a real
-station: its first 3 h are turned back into raw EDR-like files and the output is compared with the
+any names, decoded files (decoded -> app must equal EDRTest208 SEG-Y -> app), and optionally a real
+station: its first 3 h are turned back into raw EDRTest208-like files and the output is compared with the
 existing output of the same station (`DailyChunk`).
 
 ```
 python tests/verify_edr.py <chunk folder> ...
 ```
 
-Compares `edr.py` with EDR's own SEG-Y, trace by trace, in folders that contain the decoded files,
-EDR's `*_segy`, `Trilobit_SHT`, `Trilobit_RCV` and `header_edr.txt` (2026: identical for 0676
-1st/2nd/3rdChunk and 0989 2ndChunk, except header bytes 125-130 and EDR reading its own file header
+Compares `edr.py` with EDRTest208's own SEG-Y, trace by trace, in folders that contain the decoded files,
+EDRTest208's `*_segy`, `Trilobit_SHT`, `Trilobit_RCV` and `header_edr.txt` (2026: identical for 0676
+1st/2nd/3rdChunk and 0989 2ndChunk, except header bytes 125-130 and EDRTest208 reading its own file header
 as samples when the drift correction points before the first sample).

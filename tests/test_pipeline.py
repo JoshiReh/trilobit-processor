@@ -2,7 +2,7 @@
 
     python tests/test_pipeline.py <work_dir> [<real_data_station_folder>]
 
-1. synthetic: two stations, two EDR exports each; station 0002 has the 59 s gap
+1. synthetic: two stations, two EDRTest208 exports each; station 0002 has the 59 s gap
    between its exports (the 2026 problem). Checks the check, the time placement
    and the Galperin rotation.
 2. real data (optional, e.g. /Volumes/NilRodes/zJoshi/1069): the first 3 h of the
@@ -72,7 +72,7 @@ def write_run(folder, stem, first_trace, n_traces, log_start, log_stop, seed, sk
 
 
 def write_raw(folder, name, skew):
-    """Minimal EDR .raw file: only the skew at byte offset 214 matters for the check."""
+    """Minimal EDRTest208 .raw file: only the skew at byte offset 214 matters for the check."""
     raw = bytearray(1024)
     raw[214:218] = struct.pack(">i", skew)
     (folder / name).write_bytes(raw)
@@ -108,7 +108,7 @@ def test_synthetic(work):
     a2 = write_run(root / "0001/2ndChunk", "0001_2ndChunk_seq1", t0 + timedelta(minutes=20), 20,
                    t0 + timedelta(minutes=20), t0 + timedelta(minutes=40), 2)
     b1 = write_run(root / "0002/1stChunk", "0002_1stChunk_seq1", t0, 20, t0, t0 + timedelta(minutes=20), 3)
-    late = t0 + timedelta(minutes=20, seconds=59)          # EDR export starts 59 s late, one trace less
+    late = t0 + timedelta(minutes=20, seconds=59)          # EDRTest208 export starts 59 s late, one trace less
     b2 = write_run(root / "0002/2ndChunk", "0002_2ndChunk_seq1", late, 19,
                    t0 + timedelta(minutes=20), t0 + timedelta(minutes=40), 4)
     (root / "0002/2ndChunk/._0002_2ndChunk_seq1.g1_segy").write_bytes(b"\0" * 10)   # macOS junk file
@@ -127,12 +127,12 @@ def test_synthetic(work):
     assert scans["0001"].ok, core.check_report(scans.values())
     assert scans["0003"].ok, core.check_report(scans.values())
     notes3 = " | ".join(w.text for w in scans["0003"].warnings)
-    assert "overlap of -300.000 s" in notes3 and "EDR log start" in notes3, notes3
+    assert "overlap of -300.000 s" in notes3 and "EDRTest208 log start" in notes3, notes3
     assert not scans["0002"].ok
     texts = " | ".join(p.text for p in scans["0002"].problems)
     notes = " | ".join(w.text for w in scans["0002"].warnings)
-    assert "gap of +59.000 s" in texts and "EDR log" not in texts, texts
-    assert "EDR log start" in notes and "EDR log stop" in notes, notes
+    assert "gap of +59.000 s" in texts and "EDRTest208 log" not in texts, texts
+    assert "EDRTest208 log start" in notes and "EDRTest208 log stop" in notes, notes
     print("synthetic check:\n" + core.check_report(scans.values()))
 
     assert cli.main([str(root), "--hours", "0.25"]) == 1          # stops because of 0002
@@ -197,7 +197,7 @@ def test_rcv(work):
     print("rcv check:\n" + core.check_report(scans.values()))
     assert "skew not the same in all exports" in text["0011"] and "also used by 0012" in text["0011"], text["0011"]
     assert "also used by 0011" in text["0012"], text["0012"]
-    assert "but +4711 us in the .raw file" in text["0013"] and "but 9999 in the EDR log" in text["0013"], text["0013"]
+    assert "but +4711 us in the .raw file" in text["0013"] and "but 9999 in the EDRTest208 log" in text["0013"], text["0013"]
     assert scans["0014"].ok, text["0014"]
 
     # Trilobit_RCV of 0014 used for the 2nd export of 0018: grouped with 0014, but the names say 0018
@@ -260,7 +260,7 @@ def write_decoded(folder, stem, start, minutes, serial, skew, sync0, sync1, seed
 
 
 def test_decoded(work):
-    """Decoded files -> app == EDR "Seis to SEGY" (edr.write_segy, checked against EDR) -> app, byte for byte."""
+    """Decoded files -> app == EDRTest208 "Seis to SEGY" (edr.write_segy, checked against EDRTest208) -> app, byte for byte."""
     a, b = work / "decoded_in", work / "segy_in"
     shutil.rmtree(a, ignore_errors=True)
     shutil.rmtree(b, ignore_errors=True)
@@ -275,7 +275,7 @@ def test_decoded(work):
         seg = b / f"seg{number:04d}"
         seg.mkdir(parents=True)
         first_us = int((t0 - edr.EPOCH).total_seconds()) * 1_000_000
-        for comp in edr.DECODED_EXTENSIONS:                   # = EDR with Trilobit_SHT from the first sample
+        for comp in edr.DECODED_EXTENSIONS:                   # = EDRTest208 with Trilobit_SHT from the first sample
             edr.write_segy(run, comp, seg / f"full{number:04d}.{'h1' if comp == 'h' else comp}_segy",
                            edr.Receiver(station=number), first_us, 75, core.EDR_TRACE_US, edr.DEFAULT_HEADER_LINES)
 
@@ -306,14 +306,14 @@ def test_decoded(work):
                 if "--start" not in args:
                     assert x.read_bytes()[3200:] == y.read_bytes()[3200:], f"{x.name} differs"
                     continue
-                # with a start time the decoded route = EDR with Trilobit_SHT from that start, the SEG-Y
+                # with a start time the decoded route = EDRTest208 with Trilobit_SHT from that start, the SEG-Y
                 # here starts at the first sample: only the drift rest of the first trace (177-178) differs
                 xa, ya = np.frombuffer(x.read_bytes(), np.uint8), np.frombuffer(y.read_bytes(), np.uint8)
                 d = np.flatnonzero(xa[3200:] != ya[3200:]) + 3200      # textual header: filled in, checked below
                 assert len(xa) == len(ya) and all(d >= 3600) and {(i - 3600) % 120240 for i in d} <= {176, 177}, x.name
             if "--start" in args:
                 assert fa[0].name.endswith("_20260707T160910.segy"), fa[0].name
-            text = fa[0].read_bytes()[:3200].decode("cp500")          # 0042_h_...: filled-in EDR template
+            text = fa[0].read_bytes()[:3200].decode("cp500")          # 0042_h_...: filled-in EDRTest208 template
             for part in ("C01 CLIENT: UNIS", "PROJECT: Svalbard 2026 GlaciGas", "LOCATION: Fridtjovhamna",
                          "HYDROPHONE H", f"NODE NUMBER: {number:04d}", "RL: 60000 MILLISECONDS"):
                 assert part in text, (part, text[:800])
@@ -321,7 +321,7 @@ def test_decoded(work):
             assert rows[0] == "time_utc,acc_x,acc_y,acc_z,tilt_deg,battery_mV", rows[0]
             tilt = math.degrees(math.atan2(math.hypot(41, 3), 1053))
             assert len(rows) == 1 + 76 and rows[2] == f"2026-07-07 16:00:00,-41,-3,1053,{tilt:.3f},9601", rows[:3]
-            print(f"decoded {number:04d} {args}: {len(fa)} files identical to the EDR SEG-Y route")
+            print(f"decoded {number:04d} {args}: {len(fa)} files identical to the EDRTest208 SEG-Y route")
     print("decoded: OK")
 
 

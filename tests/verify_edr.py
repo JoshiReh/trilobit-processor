@@ -1,4 +1,4 @@
-"""Compare trilobit_processor.edr with EDR's own "Seis to SEGY" output, trace by trace (nothing is written).
+"""Compare trilobit_processor.edr with EDRTest208's own "Seis to SEGY" output, trace by trace (nothing is written).
 
     python tests/verify_edr.py <chunk folder with decoded files, *_segy, Trilobit_SHT, Trilobit_RCV, header_edr.txt> ...
 """
@@ -64,7 +64,7 @@ def verify(folder):
                         bad_traces.append(i)
         good = file_header_ok and not bad_header_bytes and bad_samples == 0 and n_edr == n_shots
         ok &= good
-        print(f"   {comp}: EDR traces {n_edr}, mine {n_shots}; file header identical {file_header_ok}; "
+        print(f"   {comp}: EDRTest208 traces {n_edr}, mine {n_shots}; file header identical {file_header_ok}; "
               f"trace header bytes differing (besides 125-130): {sorted(bad_header_bytes) or 'none'}; "
               f"traces with different samples: {bad_samples} {bad_traces}", flush=True)
     return ok

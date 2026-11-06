@@ -7,14 +7,14 @@ from .report import write_report
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Check, fix and segment Trilobit EDR exports.")
-    p.add_argument("root", help="folder with EDR exports (*.g1_segy ...) or decoded files (*.g1 ...) anywhere inside")
+    p = argparse.ArgumentParser(description="Check, fix and segment Trilobit EDRTest208 exports.")
+    p.add_argument("root", help="folder with EDRTest208 exports (*.g1_segy ...) or decoded files (*.g1 ...) anywhere inside")
     p.add_argument("--hours", type=float, default=24, help="segment length in hours (default 24)")
     p.add_argument("--trace-seconds", type=float, default=60, help="output trace length in s (default 60)")
     p.add_argument("--start", help="optional start, UTC 'YYYY-MM-DD HH:MM[:SS]'")
     p.add_argument("--end", help="optional end, UTC 'YYYY-MM-DD HH:MM[:SS]'")
     p.add_argument("--client", default="UNIS", help="client in the SEG-Y textual header (default UNIS)")
-    p.add_argument("--project", default="", help="project in the SEG-Y textual header (default: from the EDR log)")
+    p.add_argument("--project", default="", help="project in the SEG-Y textual header (default: from the EDRTest208 log)")
     p.add_argument("--quiet", action="store_true", help="no step-by-step log")
     p.add_argument("--check-only", action="store_true")
     p.add_argument("--force", action="store_true", help="process even if the check finds problems")

@@ -42,7 +42,7 @@ class App:
         main.pack(fill="both", expand=True)
 
         # --- input folder
-        box = ttk.LabelFrame(main, text="Input folder (EDR exports *.g1/g2/g3/h1_segy anywhere inside, any names)",
+        box = ttk.LabelFrame(main, text="Input folder (EDRTest208 exports *.g1/g2/g3/h1_segy anywhere inside, any names)",
                              padding=10)
         box.pack(fill="x")
         self.drop = tk.Label(box, text="Drop the folder here" if HAS_DND else "Choose the folder with “Browse…”",
@@ -84,7 +84,7 @@ class App:
         ttk.Entry(box, textvariable=self.client, width=20).grid(row=4, column=1, sticky="w", pady=(8, 0))
         ttk.Label(box, text="Project").grid(row=4, column=2, sticky="w", padx=(16, 0), pady=(8, 0))
         ttk.Entry(box, textvariable=self.project, width=28).grid(row=4, column=3, sticky="w", pady=(8, 0))
-        ttk.Label(box, text="Project empty = from the EDR log (Ascii Info), e.g. “Svalbard 2026 GlaciGas”",
+        ttk.Label(box, text="Project empty = from the EDRTest208 log (Ascii Info), e.g. “Svalbard 2026 GlaciGas”",
                   foreground="gray40").grid(row=5, column=0, columnspan=4, sticky="w")
         self.hours.trace_add("write", lambda *_: self.update_hint())
         self.update_hint()
@@ -182,7 +182,7 @@ class App:
             return
         stations = core.find_stations(root)
         if not stations:
-            messagebox.showerror("No EDR exports", "This folder contains no EDR exports (*.g1_segy files).")
+            messagebox.showerror("No EDRTest208 exports", "This folder contains no EDRTest208 exports (*.g1_segy files).")
             return
         self.log(f"\n=== Checking {len(stations)} station(s) in {root} ===")
         self.run_thread(self.check_worker, root, settings, process)
@@ -205,7 +205,7 @@ class App:
             go = messagebox.askyesno(
                 "Problems found",
                 "The check found gaps or mismatches (see log).\n\n"
-                "Recommended: export again in EDR and check again.\n\n"
+                "Recommended: export again in EDRTest208 and check again.\n\n"
                 "Process anyway? Missing times are filled with zeros, "
                 "all data stay at their correct time.", icon="warning")
             if not go:

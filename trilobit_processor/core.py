@@ -2,12 +2,12 @@
 
 One pipeline:
 
-  check    - is the EDR export of every station one continuous time series?
-  fix      - repair the broken EDR binary header, rotate Galperin g1/g2/g3 -> x/y/z
+  check    - is the EDRTest208 export of every station one continuous time series?
+  fix      - repair the broken EDRTest208 binary header, rotate Galperin g1/g2/g3 -> x/y/z
   segment  - cut the continuous recording into segments of N hours with 60 s output traces
 
 `fix` and `segment` run together, output trace by output trace, so memory use stays
-small and the EDR input folders are only read, never modified. Every input trace is
+small and the EDRTest208 input folders are only read, never modified. Every input trace is
 placed by the time stamp in its own trace header: a gap in the recording stays a gap
 (filled with zeros) instead of being closed up.
 """
@@ -53,7 +53,7 @@ def fmt_s(us):
 
 def read_layout(path):
     """Samples per trace and sample interval from the FIRST TRACE header
-    (the binary header of raw EDR files is broken)."""
+    (the binary header of raw EDRTest208 files is broken)."""
     with open(path, "rb") as f:
         f.seek(FIRST_TRACE_BYTE)
         h = f.read(TRACE_HEADER_BYTES)
@@ -96,7 +96,7 @@ def write_trace_start_time(trace_header, start):
 
 
 def fix_binary_header(header, n_samples, dt_us):
-    """Patch the fields EDR leaves as garbage (positions as in 1_Binary_Header_Correction)."""
+    """Patch the fields EDRTest208 leaves as garbage (positions as in 1_Binary_Header_Correction)."""
     header = bytearray(header)
     fixes = {3217: dt_us, 3221: n_samples, 3223: dt_us, 3227: n_samples, 3229: 1, 3231: 1, 3235: 1, 3255: 1}
     for byte_1_based, value in fixes.items():
@@ -105,13 +105,13 @@ def fix_binary_header(header, n_samples, dt_us):
 
 
 def receiver_info(trace_header):
-    """Values EDR copies from Trilobit_RCV into every trace header: skew [us], unit serial, station number."""
+    """Values EDRTest208 copies from Trilobit_RCV into every trace header: skew [us], unit serial, station number."""
     h = bytes(trace_header)
     return struct.unpack(">i", h[24:28])[0], struct.unpack(">H", h[90:92])[0], struct.unpack(">H", h[92:94])[0]
 
 
 def read_raw_skew(folder):
-    """Skew stored in an EDR .raw file at byte offset 214 (as get_skew.ps1); None if there is no .raw file."""
+    """Skew stored in an EDRTest208 .raw file at byte offset 214 (as get_skew.ps1); None if there is no .raw file."""
     raws = sorted(p for p in folder.glob("*.raw") if not p.name.startswith((".", "old_")))
     if not raws:
         return None
@@ -142,7 +142,7 @@ class Problem:
 
 @dataclass
 class Run:
-    """One EDR export (one recording sequence) = 4 raw files + log."""
+    """One EDRTest208 export (one recording sequence) = 4 raw files + log."""
     station: str
     folder: Path
     stem: str
@@ -154,10 +154,10 @@ class Run:
     log_start_us: int | None = None
     log_stop_us: int | None = None
     log_dt_us: int | None = None
-    skew_us: int | None = None          # Trilobit_RCV values EDR wrote into the trace headers
+    skew_us: int | None = None          # Trilobit_RCV values EDRTest208 wrote into the trace headers
     serial: int | None = None
     station_number: int | None = None
-    kind: str = "segy"                  # "segy" = EDR SEG-Y export, "decoded" = EDR "Decode Raw" output
+    kind: str = "segy"                  # "segy" = EDRTest208 SEG-Y export, "decoded" = EDRTest208 "Decode Raw" output
     decoded: edr.DecodedRun | None = None
 
     @property
@@ -202,7 +202,7 @@ STATION_NUMBER = re.compile(r"(?<!\d)\d{4}(?!\d)")  # 4-digit number in a folder
 
 
 def header_station(path):
-    """Station number EDR wrote from Trilobit_RCV into the first trace header (0 if unreadable)."""
+    """Station number EDRTest208 wrote from Trilobit_RCV into the first trace header (0 if unreadable)."""
     with open(path, "rb") as f:
         f.seek(FIRST_TRACE_BYTE)
         h = f.read(TRACE_HEADER_BYTES)
@@ -228,7 +228,7 @@ def name_station(root, path):
 def find_stations(root):
     """All exports below root, grouped by station: [(station, folder, runs)].
 
-    An export is either EDR SEG-Y (*.g1_segy, .g2_segy, .g3_segy, .h1_segy) or the output of EDR
+    An export is either EDRTest208 SEG-Y (*.g1_segy, .g2_segy, .g3_segy, .h1_segy) or the output of EDRTest208
     "Decode Raw" (*.g1, .g2, .g3, .h1); decoded files are preferred if both exist with the same name.
     Folder and file names do not matter: the station number of SEG-Y exports comes from the trace
     headers (only if it is missing there, from a 4-digit number in the names); decoded files have no
@@ -252,7 +252,7 @@ def find_stations(root):
         if not is_visible(g1):
             continue
         stem = g1.name[:-len(RAW_EXTENSIONS["g1"])]
-        if (g1.parent, stem) in decoded:      # EDR SEG-Y made from decoded files that are used directly
+        if (g1.parent, stem) in decoded:      # EDRTest208 SEG-Y made from decoded files that are used directly
             continue
         number = header_station(g1) or name_station(root, g1)
         station = f"{number:04d}"
@@ -270,7 +270,7 @@ def find_stations(root):
 
 
 def read_edr_log(path):
-    """Recording start/stop and sample interval from the EDR log (*_seq1.txt)."""
+    """Recording start/stop and sample interval from the EDRTest208 log (*_seq1.txt)."""
     text = path.read_text(errors="ignore")
 
     def date(key):
@@ -288,11 +288,11 @@ def read_log_serial(path):
 
 # ------------------------------------------------------------------ step 0: check
 
-EDR_TRACE_US = 60_000_000      # EDR record length for decoded exports (RL 60000 ms in Trilobit_RCV)
+EDR_TRACE_US = 60_000_000      # EDRTest208 record length for decoded exports (RL 60000 ms in Trilobit_RCV)
 
 
 def set_decoded_grid(run, anchor_us=None, end_us=None):
-    """Trace start times of a decoded export, as EDR "Seis to SEGY" with Trilobit_SHT from anchor_us
+    """Trace start times of a decoded export, as EDRTest208 "Seis to SEGY" with Trilobit_SHT from anchor_us
     (default: first sample) to end_us (default: last sample): 60 s traces, complete ones inside the data."""
     d = run.decoded
     data_start = d.start_epoch * 1_000_000
@@ -305,11 +305,11 @@ def set_decoded_grid(run, anchor_us=None, end_us=None):
 
 
 def _scan_segy(scan, run, where, log):
-    """EDR SEG-Y export: trace times, layout, gaps inside the files. False if the export is unusable."""
+    """EDRTest208 SEG-Y export: trace times, layout, gaps inside the files. False if the export is unusable."""
     empty = [p.name for p in run.files.values() if p.stat().st_size <= FIRST_TRACE_BYTE]
     if empty:
         scan.problems.append(Problem(scan.station, where,
-                                     f"no traces, only the file header - EDR export failed? ({', '.join(empty)})"))
+                                     f"no traces, only the file header - EDRTest208 export failed? ({', '.join(empty)})"))
         return False
     try:
         layouts = {c: read_layout(p) for c, p in run.files.items()}
@@ -351,7 +351,7 @@ def _scan_segy(scan, run, where, log):
 
 
 def _scan_decoded(scan, run, where, log):
-    """EDR "Decode Raw" output: header (start, skew, serial), length. False if the export is unusable."""
+    """EDRTest208 "Decode Raw" output: header (start, skew, serial), length. False if the export is unusable."""
     try:
         d = run.decoded = edr.read_decoded(run.files["g1"])
     except ValueError as e:
@@ -361,7 +361,7 @@ def _scan_decoded(scan, run, where, log):
         scan.problems.append(Problem(scan.station, where, "no sample interval in the decoded header"))
         return False
     # an unfinished "Decode Raw" (still running, aborted, or copied too early): data end before the
-    # recording end in the header, files of different length, empty log (EDR writes it at the very end)
+    # recording end in the header, files of different length, empty log (EDRTest208 writes it at the very end)
     unfinished = []
     data_end = d.start_epoch + d.n_samples * d.dt_us / 1e6
     if data_end < d.stop_epoch - 1:
@@ -394,7 +394,7 @@ def scan_station(station, station_folder, runs, root, log=None):
     scan = StationScan(station=station, folder=station_folder, runs=runs)
     for run in scan.runs:
         where = f"{run.name}/{run.stem}"
-        log(f"   {where} ({'decoded' if run.kind == 'decoded' else 'EDR SEG-Y'})")
+        log(f"   {where} ({'decoded' if run.kind == 'decoded' else 'EDRTest208 SEG-Y'})")
         missing = [p.name for p in run.files.values() if not p.exists()]
         if missing:
             scan.problems.append(Problem(scan.station, where, f"missing files: {', '.join(missing)}"))
@@ -404,22 +404,22 @@ def scan_station(station, station_folder, runs, root, log=None):
             continue
 
         if run.log is None:
-            scan.warnings.append(Problem(scan.station, where, "no EDR log (*.txt) - start/stop not compared"))
+            scan.warnings.append(Problem(scan.station, where, "no EDRTest208 log (*.txt) - start/stop not compared"))
         else:
             # The log describes the extracted raw chunk, not the SHT range: raw chunks are extracted with
-            # margins (EDR needs data before the first sample for the drift correction), so only a note.
+            # margins (EDRTest208 needs data before the first sample for the drift correction), so only a note.
             run.log_start_us, run.log_stop_us, run.log_dt_us = read_edr_log(run.log)
             if run.log_start_us is not None and abs(run.start_us - run.log_start_us) > TOLERANCE_US:
                 scan.warnings.append(Problem(scan.station, where,
-                                             f"first trace {to_datetime(run.start_us)} but EDR log start "
+                                             f"first trace {to_datetime(run.start_us)} but EDRTest208 log start "
                                              f"{to_datetime(run.log_start_us)} ({fmt_s(run.start_us - run.log_start_us)})"))
             if run.log_stop_us is not None and abs(run.end_us - run.log_stop_us) > TOLERANCE_US:
                 scan.warnings.append(Problem(scan.station, where,
-                                             f"end of last trace {to_datetime(run.end_us)} but EDR log stop "
+                                             f"end of last trace {to_datetime(run.end_us)} but EDRTest208 log stop "
                                              f"{to_datetime(run.log_stop_us)} ({fmt_s(run.end_us - run.log_stop_us)})"))
             if run.log_dt_us is not None and run.log_dt_us != run.dt_us:
                 scan.problems.append(Problem(scan.station, where,
-                                             f"sample interval {run.dt_us} us in trace headers, {run.log_dt_us} us in EDR log"))
+                                             f"sample interval {run.dt_us} us in trace headers, {run.log_dt_us} us in EDRTest208 log"))
 
         # Trilobit_RCV values (SEG-Y) / header values (decoded): the skew sets the clock drift correction,
         # a wrong one shifts the data
@@ -433,7 +433,7 @@ def scan_station(station, station_folder, runs, root, log=None):
         log_serial = read_log_serial(run.log) if run.log is not None else None
         if log_serial is not None and log_serial != run.serial:
             scan.problems.append(Problem(scan.station, where, f"{source} serial {run.serial}, "
-                                                              f"but {log_serial} in the EDR log"))
+                                                              f"but {log_serial} in the EDRTest208 log"))
         # names with 4-digit numbers (e.g. "0989/2ndChunk") must contain this station: catches a
         # Trilobit_RCV copied from another station, whose exports would otherwise be merged with that one
         numbers = path_numbers(root, run.files["g1"])
@@ -492,7 +492,7 @@ def check_report(scans):
     for scan in scans:
         n_traces = sum(len(r.starts_us) for r in scan.usable)
         status = "OK" if scan.ok else "PROBLEM"
-        lines.append(f"[{status}] {scan.station}: {len(scan.runs)} EDR export(s), {n_traces} traces")
+        lines.append(f"[{status}] {scan.station}: {len(scan.runs)} EDRTest208 export(s), {n_traces} traces")
         for r in scan.usable:
             kind = " (decoded)" if r.kind == "decoded" else ""
             lines.append(f"      {r.name}/{r.stem}{kind}: {to_datetime(r.start_us)} -> {to_datetime(r.end_us)} UTC, "
@@ -511,7 +511,7 @@ class Settings:
     start_utc: datetime | None = None
     end_utc: datetime | None = None
     client: str = "UNIS"
-    project: str = ""          # empty: from the "Ascii Info" line of the EDR log
+    project: str = ""          # empty: from the "Ascii Info" line of the EDRTest208 log
 
 
 def parse_utc(text):
@@ -556,7 +556,7 @@ class Plan:
 
 
 def plan_station(scan, settings):
-    # decoded exports: traces like EDR with Trilobit_SHT = start/end of the settings (or of the data)
+    # decoded exports: traces like EDRTest208 with Trilobit_SHT = start/end of the settings (or of the data)
     for r in scan.runs:
         if r.decoded is not None:
             set_decoded_grid(r, None if settings.start_utc is None else to_us(settings.start_utc),
@@ -587,7 +587,7 @@ def plan_station(scan, settings):
 
 
 def processing_summary(plans, settings):
-    """Overview before processing (like EDR): sample interval, recording start/end, new start/end, chunks."""
+    """Overview before processing (like EDRTest208): sample interval, recording start/end, new start/end, chunks."""
     lines = []
     for p in plans:
         runs = p.scan.usable
@@ -606,7 +606,7 @@ def processing_summary(plans, settings):
 def processing_sentence(plans, settings):
     n = sum(1 for p in plans for w in p.windows if w is not None)
     decoded = any(r.decoded for p in plans for r in p.scan.usable)
-    text = (f"The {'decoded ' if decoded else ''}data from EDR will now be chunked into {n} {settings.segment_hours:g}-hour "
+    text = (f"The {'decoded ' if decoded else ''}data from EDRTest208 will now be chunked into {n} {settings.segment_hours:g}-hour "
             f"chunks per component (x, y, z, h)")
     if decoded:
         text += ", with additional information (tilt, battery, temperature) in a CSV"
@@ -618,7 +618,7 @@ class Cancelled(Exception):
 
 
 def read_log_info(path):
-    """'Ascii Info' of the EDR log, e.g. 'Svalbard 2026 GlaciGas, Fridtjovhamna, Methane Flairs.' ('' if none)."""
+    """'Ascii Info' of the EDRTest208 log, e.g. 'Svalbard 2026 GlaciGas, Fridtjovhamna, Methane Flairs.' ('' if none)."""
     if path is None:
         return ""
     m = re.search(r"Ascii Info:\s*(.*)", path.read_text(errors="ignore"))
@@ -626,7 +626,7 @@ def read_log_info(path):
 
 
 def header_lines(run, comp, plan, settings):
-    """Textual header for decoded exports: header_edr.txt next to the files (as EDR), else EDR's
+    """Textual header for decoded exports: header_edr.txt next to the files (as EDRTest208), else EDRTest208's
     template filled in with this project, station, component and time window."""
     for folder in (run.folder, run.folder.parent):
         p = folder / "header_edr.txt"
@@ -642,7 +642,7 @@ def header_lines(run, comp, plan, settings):
 
 
 def trace_reader(run):
-    """Function (component, index) -> samples of input trace `index` of this export, as in EDR's SEG-Y."""
+    """Function (component, index) -> samples of input trace `index` of this export, as in EDRTest208's SEG-Y."""
     if run.decoded is None:
         traces = {c: open_traces(p, run.n_samples) for c, p in run.files.items()}
         return lambda c, i: traces[c][i]["data"]
@@ -657,8 +657,8 @@ def trace_reader(run):
 
 
 def export_headers(run, src, lines=None):
-    """(3600-byte file header, first trace header) of component src of an export, as in EDR's SEG-Y
-    (decoded exports: with the textual header `lines`, default EDR's template)."""
+    """(3600-byte file header, first trace header) of component src of an export, as in EDRTest208's SEG-Y
+    (decoded exports: with the textual header `lines`, default EDRTest208's template)."""
     if run.decoded is None:
         with open(run.files[src], "rb") as f:
             return f.read(FIRST_TRACE_BYTE), f.read(TRACE_HEADER_BYTES)

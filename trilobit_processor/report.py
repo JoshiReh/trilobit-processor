@@ -15,7 +15,7 @@ def write_report(root, scans, settings, results):
         f"output traces: {settings.output_trace_seconds:g} s",
         f"Start (UTC): {settings.start_utc or 'start of recording'}, end (UTC): {settings.end_utc or 'end of recording'}",
         "",
-        "CHECK (EDR export continuous?)",
+        "CHECK (EDRTest208 export continuous?)",
         core.check_report(scans),
     ]
     if results is not None:

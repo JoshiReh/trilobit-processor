@@ -1,4 +1,4 @@
-"""EDR "Seis to SEGY" without EDR: decoded files (*.g1/.g2/.g3/.h1 from "Decode Raw") -> SEG-Y.
+"""EDRTest208 "Seis to SEGY" without EDRTest208: decoded files (*.g1/.g2/.g3/.h1 from "Decode Raw") -> SEG-Y.
 
 Reverse-engineered from EDR208 output (station 0676, 2026) and checked against it trace by trace.
 
@@ -7,7 +7,7 @@ Decoded file  = 512-byte header (copy of the start-log packet of the .raw file) 
 Header bytes  = 8 epoch of the first sample, 12 end of the recording, 60 unit serial, 68 sample interval [us],
                 206 last GPS sync before the recording, 210 GPS sync after it ("skew check"),
                 214 skew [us] measured at the second sync (same as get_skew.ps1).
-Drift         = the skew grows linearly between the two syncs. EDR evaluates it once at the first
+Drift         = the skew grows linearly between the two syncs. EDRTest208 evaluates it once at the first
                 sample of the decoded file (start), truncated to whole us ("MicroSeconds skew before
                 first sample"), and adds rate * (t - start) for a trace starting at t, with the rate
                 skew / (sync1 - sync0) [us/s] in single precision; the sum is truncated to whole us.
@@ -30,7 +30,7 @@ DECODED_EXTENSIONS = {"g1": ".g1", "g2": ".g2", "g3": ".g3", "h": ".h1"}
 CHANNEL_CODE = {"h": 11, "g1": 12, "g2": 13, "g3": 14}      # trace header bytes 29-30
 EPOCH = datetime(1970, 1, 1)
 
-# EDR's header_edr.txt (40 lines, copied verbatim from the 2026 processing folders, including its
+# EDRTest208's header_edr.txt (40 lines, copied verbatim from the 2026 processing folders, including its
 # placeholders); used when there is no header_edr.txt next to the decoded files
 DEFAULT_HEADER_LINES = [
     'C01 CLIENT:                                                            UoB/NORCE',
@@ -75,7 +75,7 @@ DEFAULT_HEADER_LINES = [
     'C40  END OF EBCDIC                                                              ',
 ]
 
-# EDR's binary header, as written for 60 s records at 2 ms (only these words are non-zero);
+# EDRTest208's binary header, as written for 60 s records at 2 ms (only these words are non-zero);
 # 3217/3219 = sample interval, 3221/3223 = samples per trace with the top bit set
 BINARY_HEADER_WORDS = {3207: 1, 3211: 1, 3213: 1, 3225: 5, 3227: 256, 3229: 1024, 3231: 256, 3255: 256}
 
@@ -120,7 +120,7 @@ def read_decoded(g1_path):
     with open(g1_path, "rb") as f:
         h = f.read(DECODED_HEADER_BYTES)
     if len(h) != DECODED_HEADER_BYTES or _u32(h, 0) != 0xFFFFFFFF or h[6] != 0x80:
-        raise ValueError(f"{g1_path.name}: not a decoded EDR file (no start-log header)")
+        raise ValueError(f"{g1_path.name}: not a decoded EDRTest208 file (no start-log header)")
     n = min((p.stat().st_size - DECODED_HEADER_BYTES) // 4 for p in files.values())
     return DecodedRun(folder=g1_path.parent, stem=stem, files=files, start_epoch=_u32(h, 8), stop_epoch=_u32(h, 12),
                       serial=_i32(h, 60),
@@ -183,7 +183,7 @@ def binary_header(n_samples, dt_us):
 
 @dataclass
 class Receiver:
-    """The values EDR takes from Trilobit_RCV (first RC line)."""
+    """The values EDRTest208 takes from Trilobit_RCV (first RC line)."""
     station: int
     line: int = 1
     x: float = 0.0
@@ -208,7 +208,7 @@ def trace_header(run, comp, rcv, number, t_us, n_samples, rest_us):
     h[92:94] = struct.pack(">H", rcv.station)
     h[114:116] = struct.pack(">H", n_samples)
     h[116:118] = struct.pack(">H", run.dt_us)
-    # bytes 125-130: accelerometer Gx/Gy/Gz [g * 10000] (header_edr.txt C26-C27); how EDR derives them
+    # bytes 125-130: accelerometer Gx/Gy/Gz [g * 10000] (header_edr.txt C26-C27); how EDRTest208 derives them
     # from aux5 is not known yet -> 0
     h[156:158] = struct.pack(">H", t.year)
     h[158:160] = struct.pack(">H", int(t.strftime("%j")))
@@ -230,7 +230,7 @@ def trace_samples(run, data, t_us, n_samples, shift):
 
 
 def write_segy(run, comp, out_path, rcv, first_shot_us, n_shots, trace_us, header_lines):
-    """One SEG-Y file like EDR's <stem>.<comp>_segy: n_shots traces starting at first_shot_us."""
+    """One SEG-Y file like EDRTest208's <stem>.<comp>_segy: n_shots traces starting at first_shot_us."""
     n_samples = trace_us // run.dt_us
     data = np.memmap(run.files[comp], dtype=">i4", mode="r", offset=DECODED_HEADER_BYTES, shape=(run.n_samples,))
     with open(out_path, "wb") as f:
