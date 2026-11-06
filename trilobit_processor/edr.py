@@ -145,6 +145,24 @@ def drift(run, t_us, skew_us=None):
     return shift, skew_t - shift * run.dt_us
 
 
+COMPONENT_NAME = {"x": "GEOPHONE X", "y": "GEOPHONE Y", "z": "GEOPHONE Z", "h": "HYDROPHONE H"}
+
+
+def project_header_lines(client, project, location, station, serial, component, dt_us, trace_ms, start, end):
+    """DEFAULT_HEADER_LINES with the project lines filled in (C01-C03, C06, C07, C09, C10)."""
+    def line(number, text):
+        return f"C{number:02d} {text}"[:80].ljust(80)
+    lines = list(DEFAULT_HEADER_LINES)
+    lines[0] = line(1, f"CLIENT: {client}")
+    lines[1] = line(2, f"PROJECT: {project:<36} LOCATION: {location}")
+    lines[2] = line(3, f"CONTRACTOR: SEABED GEOSOLUTIONS        YEAR: {start:%Y}")
+    lines[5] = line(6, f"PRODUCT TYPE: RECEIVER GATHER   {COMPONENT_NAME[component]}")
+    lines[6] = line(7, f"FORMAT: SEGY IEEE 32BIT SI: {dt_us} MICROSECONDS  RL: {trace_ms:g} MILLISECONDS")
+    lines[8] = line(9, f"NODE NUMBER: {station}   EDR SERIAL: {serial}")
+    lines[9] = line(10, f"DATE OF DEPLOYMENT: {start:%Y.%m.%d}   DATE OF RETRIEVAL: {end:%Y.%m.%d}")
+    return lines
+
+
 def text_header(lines):
     """3200-byte EBCDIC textual header from 40 lines of text (e.g. header_edr.txt)."""
     lines = [l.rstrip("\r\n") for l in lines][:40]

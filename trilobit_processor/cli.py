@@ -13,13 +13,15 @@ def main(argv=None):
     p.add_argument("--trace-seconds", type=float, default=60, help="output trace length in s (default 60)")
     p.add_argument("--start", help="optional start, UTC 'YYYY-MM-DD HH:MM[:SS]'")
     p.add_argument("--end", help="optional end, UTC 'YYYY-MM-DD HH:MM[:SS]'")
+    p.add_argument("--client", default="UNIS", help="client in the SEG-Y textual header (default UNIS)")
+    p.add_argument("--project", default="", help="project in the SEG-Y textual header (default: from the EDR log)")
     p.add_argument("--quiet", action="store_true", help="no step-by-step log")
     p.add_argument("--check-only", action="store_true")
     p.add_argument("--force", action="store_true", help="process even if the check finds problems")
     p.add_argument("--overwrite", action="store_true", help="replace existing segment files")
     a = p.parse_args(argv)
 
-    settings = core.Settings(a.hours, a.trace_seconds, core.parse_utc(a.start), core.parse_utc(a.end))
+    settings = core.Settings(a.hours, a.trace_seconds, core.parse_utc(a.start), core.parse_utc(a.end), a.client, a.project)
     log = (lambda text: None) if a.quiet else print
 
     scans = core.scan_all(a.root, log=log)

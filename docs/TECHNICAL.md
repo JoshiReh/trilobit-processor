@@ -53,6 +53,12 @@ headers (a `Trilobit_RCV` copied from another station).
 
 ## Output
 
+SEG-Y textual header (decoded files): EDR's `header_edr.txt` template, with client (setting, default
+UNIS), project and location (setting, default from the "Ascii Info" line of the EDR log), year,
+component, sample interval, trace length, station, serial and the dates of the first and last segment
+filled in. A `header_edr.txt` next to the decoded files is used unchanged instead (like EDR).
+
+
 Per station a new folder in the deepest folder that contains all of its exports (e.g. `0498/`):
 `<hours>hourChunks`, e.g. `24hourChunks`, `12hourChunks`, `1hourChunks`.
 Files: `<station>_<x|y|z|h>_chunk<NNNN>_<start UTC>.segy`.

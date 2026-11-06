@@ -57,7 +57,8 @@ def trace_header(i, t, skew, serial, station):
 def edr_log(start, stop, serial):
     f = lambda t: f"(Day {t.timetuple().tm_yday}) {t:%a %b %d %H:%M:%S %Y} (UTC 0)"
     return (f"START LOG\nDate Start: {f(start)}\nDate Stop: {f(stop)}\nUnit Serial Number: {serial}\n"
-            f"Seis Sample Interval (microseconds):{DT_US}\nSTOP LOG\nDate Stop: {f(stop + timedelta(seconds=1))}\n")
+            f"Seis Sample Interval (microseconds):{DT_US}\n"
+            f"Ascii Info: Svalbard 2026 GlaciGas, Fridtjovhamna, Methane Flairs.\nSTOP LOG\nDate Stop: {f(stop + timedelta(seconds=1))}\n")
 
 
 def write_run(folder, stem, first_trace, n_traces, log_start, log_stop, seed, skew=None, rcv_of=None):
@@ -268,6 +269,8 @@ def test_decoded(work):
                 43: (101113, datetime(2026, 7, 5, 13, 28, 58), datetime(2026, 8, 5, 13, 26, 23))}
     for number, (skew, s0, s1) in stations.items():
         write_decoded(a / f"full{number:04d}", f"full{number:04d}", t0, 75, 2000 + number, skew, s0, s1, number)
+        (a / f"full{number:04d}" / f"full{number:04d}.txt").write_text(
+            edr_log(t0, t0 + timedelta(minutes=75), 2000 + number))
         run = edr.read_decoded(a / f"full{number:04d}" / f"full{number:04d}.g1")
         seg = b / f"seg{number:04d}"
         seg.mkdir(parents=True)
@@ -301,15 +304,19 @@ def test_decoded(work):
             assert [f.name for f in fa] == [f.name for f in fb] and fa, (fa, fb)
             for x, y in zip(fa, fb):
                 if "--start" not in args:
-                    assert x.read_bytes() == y.read_bytes(), f"{x.name} differs"
+                    assert x.read_bytes()[3200:] == y.read_bytes()[3200:], f"{x.name} differs"
                     continue
                 # with a start time the decoded route = EDR with Trilobit_SHT from that start, the SEG-Y
                 # here starts at the first sample: only the drift rest of the first trace (177-178) differs
                 xa, ya = np.frombuffer(x.read_bytes(), np.uint8), np.frombuffer(y.read_bytes(), np.uint8)
-                d = np.flatnonzero(xa != ya)
+                d = np.flatnonzero(xa[3200:] != ya[3200:]) + 3200      # textual header: filled in, checked below
                 assert len(xa) == len(ya) and all(d >= 3600) and {(i - 3600) % 120240 for i in d} <= {176, 177}, x.name
             if "--start" in args:
                 assert fa[0].name.endswith("_20260707T160910.segy"), fa[0].name
+            text = fa[0].read_bytes()[:3200].decode("cp500")          # 0042_h_...: filled-in EDR template
+            for part in ("C01 CLIENT: UNIS", "PROJECT: Svalbard 2026 GlaciGas", "LOCATION: Fridtjovhamna",
+                         "HYDROPHONE H", f"NODE NUMBER: {number:04d}", "RL: 60000 MILLISECONDS"):
+                assert part in text, (part, text[:800])
             rows = (a / f"full{number:04d}" / f"{number:04d}_aux_per_minute.csv").read_text(encoding="utf-8").splitlines()
             assert rows[0] == "time_utc,acc_x,acc_y,acc_z,tilt_deg,battery_mV", rows[0]
             tilt = math.degrees(math.atan2(math.hypot(41, 3), 1053))

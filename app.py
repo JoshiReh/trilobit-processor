@@ -65,6 +65,8 @@ class App:
         self.start = tk.StringVar()
         self.end = tk.StringVar()
         self.folder_hint = tk.StringVar()
+        self.client = tk.StringVar(value="UNIS")
+        self.project = tk.StringVar()
 
         ttk.Label(box, text="Segment length [hours]").grid(row=0, column=0, sticky="w")
         ttk.Combobox(box, textvariable=self.hours, values=SEGMENT_CHOICES, width=8).grid(row=0, column=1, sticky="w")
@@ -78,6 +80,12 @@ class App:
         ttk.Label(box, text="Format: YYYY-MM-DD HH:MM[:SS] in UTC, e.g. 2026-07-07 16:00 - empty = whole recording "
                             "(with decoded files: incl. transport and deployment)", foreground="gray40").grid(
             row=3, column=0, columnspan=4, sticky="w")
+        ttk.Label(box, text="Client (SEG-Y header)").grid(row=4, column=0, sticky="w", pady=(8, 0))
+        ttk.Entry(box, textvariable=self.client, width=20).grid(row=4, column=1, sticky="w", pady=(8, 0))
+        ttk.Label(box, text="Project").grid(row=4, column=2, sticky="w", padx=(16, 0), pady=(8, 0))
+        ttk.Entry(box, textvariable=self.project, width=28).grid(row=4, column=3, sticky="w", pady=(8, 0))
+        ttk.Label(box, text="Project empty = from the EDR log (Ascii Info), e.g. “Svalbard 2026 GlaciGas”",
+                  foreground="gray40").grid(row=5, column=0, columnspan=4, sticky="w")
         self.hours.trace_add("write", lambda *_: self.update_hint())
         self.update_hint()
 
@@ -137,7 +145,7 @@ class App:
         start, end = core.parse_utc(self.start.get()), core.parse_utc(self.end.get())
         if start and end and end <= start:
             raise ValueError("The end must be after the start.")
-        return core.Settings(hours, trace_s, start, end)
+        return core.Settings(hours, trace_s, start, end, self.client.get().strip(), self.project.get().strip())
 
     def run_thread(self, target, *args):
         self.cancel.clear()

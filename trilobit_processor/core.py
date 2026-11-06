@@ -510,6 +510,8 @@ class Settings:
     output_trace_seconds: float = 60
     start_utc: datetime | None = None
     end_utc: datetime | None = None
+    client: str = "UNIS"
+    project: str = ""          # empty: from the "Ascii Info" line of the EDR log
 
 
 def parse_utc(text):
@@ -615,13 +617,28 @@ class Cancelled(Exception):
     pass
 
 
-def header_lines(run):
-    """Textual header for decoded exports: header_edr.txt next to the files (as EDR), else EDR's default."""
+def read_log_info(path):
+    """'Ascii Info' of the EDR log, e.g. 'Svalbard 2026 GlaciGas, Fridtjovhamna, Methane Flairs.' ('' if none)."""
+    if path is None:
+        return ""
+    m = re.search(r"Ascii Info:\s*(.*)", path.read_text(errors="ignore"))
+    return "" if m is None else m.group(1).strip()
+
+
+def header_lines(run, comp, plan, settings):
+    """Textual header for decoded exports: header_edr.txt next to the files (as EDR), else EDR's
+    template filled in with this project, station, component and time window."""
     for folder in (run.folder, run.folder.parent):
         p = folder / "header_edr.txt"
         if p.exists():
             return p.read_text(errors="ignore").splitlines()
-    return edr.DEFAULT_HEADER_LINES
+    info = [part.strip(" .") for part in read_log_info(run.log).split(",")]
+    project = settings.project or info[0]
+    location = info[1] if len(info) > 1 else ""
+    used = [w for w in plan.windows if w is not None]
+    start, end = (to_datetime(used[0][0]), to_datetime(used[-1][1])) if used else (run.decoded.start, run.decoded.end)
+    return edr.project_header_lines(settings.client, project, location, plan.scan.station, run.decoded.serial,
+                                    comp, run.decoded.dt_us, plan.out_trace_us / 1000, start, end)
 
 
 def trace_reader(run):
@@ -639,14 +656,15 @@ def trace_reader(run):
     return read
 
 
-def export_headers(run, src):
-    """(3600-byte file header, first trace header) of component src of an export, as in EDR's SEG-Y."""
+def export_headers(run, src, lines=None):
+    """(3600-byte file header, first trace header) of component src of an export, as in EDR's SEG-Y
+    (decoded exports: with the textual header `lines`, default EDR's template)."""
     if run.decoded is None:
         with open(run.files[src], "rb") as f:
             return f.read(FIRST_TRACE_BYTE), f.read(TRACE_HEADER_BYTES)
     d = run.decoded
     t_us = int(run.starts_us[0])
-    file_header = edr.text_header(header_lines(run)) + edr.binary_header(run.n_samples, d.dt_us)
+    file_header = edr.text_header(lines or edr.DEFAULT_HEADER_LINES) + edr.binary_header(run.n_samples, d.dt_us)
     rcv = edr.Receiver(station=run.station_number)
     return file_header, edr.trace_header(d, src, rcv, 1, t_us, run.n_samples, edr.drift(d, t_us)[1])
 
@@ -686,7 +704,8 @@ def process_station(plan, settings, progress=None, cancel=None, log=None):
     # headers: from the earliest export (runs are sorted by start time)
     templates = {}
     for comp, src in (("x", "g1"), ("y", "g1"), ("z", "g1"), ("h", "h")):
-        file_header, first_trace_header = export_headers(runs[0], src)
+        lines = None if runs[0].decoded is None else header_lines(runs[0], comp, plan, settings)
+        file_header, first_trace_header = export_headers(runs[0], src, lines)
         file_header = fix_binary_header(file_header, ns, dt_us)
         file_header[3220:3222] = struct.pack(">H", out_ns)
         file_header[3222:3224] = struct.pack(">H", out_ns)
