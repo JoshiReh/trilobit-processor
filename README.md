@@ -32,6 +32,12 @@ The app checks the data, corrects the clock drift exactly like EDRTest208, and w
 - `<station>_aux_per_minute.csv` - tilt, battery and temperature for every minute
 - `trilobit_report_<date>.txt` - what was checked and written
 
+## Jupyter notebooks
+
+If you exported SEG-Y files with EDRTest208 yourself, the notebooks in [notebooks/](notebooks/) do the same
+steps one by one (export check, header fix and x/y/z, daily files, quality check). They are used in Session 6 of
+the [Geo-OBS manual](https://github.com/JoshiReh/Geo-OBS).
+
 ## More
 
 Technical details, command line version, tests and how to build: [docs/TECHNICAL.md](docs/TECHNICAL.md)
