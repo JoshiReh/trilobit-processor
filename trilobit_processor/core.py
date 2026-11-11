@@ -96,9 +96,13 @@ def write_trace_start_time(trace_header, start):
 
 
 def fix_binary_header(header, n_samples, dt_us):
-    """Patch the fields EDRTest208 leaves as garbage (positions as in 1_Binary_Header_Correction)."""
+    """Patch the fields EDRTest208 leaves as garbage. Byte positions as in SEG-Y rev 1:
+    3217/3219 sample interval (and of the original recording), 3221/3223 samples per trace (and of the
+    original recording), 3227 ensemble fold, 3229 trace sorting, 3231 vertical sum, 3235 sweep frequency
+    at end (0, no sweep), 3255 measurement system (1 = meters)."""
     header = bytearray(header)
-    fixes = {3217: dt_us, 3221: n_samples, 3223: dt_us, 3227: n_samples, 3229: 1, 3231: 1, 3235: 1, 3255: 1}
+    fixes = {3217: dt_us, 3219: dt_us, 3221: n_samples, 3223: n_samples,
+             3227: 1, 3229: 1, 3231: 1, 3235: 0, 3255: 1}
     for byte_1_based, value in fixes.items():
         header[byte_1_based - 1:byte_1_based + 1] = struct.pack(">H", value)
     return header

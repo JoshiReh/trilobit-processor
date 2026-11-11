@@ -23,7 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from trilobit_processor import cli, core, edr  # noqa: E402
 
 NS, DT_US = 30000, 2000
-BROKEN = {3221: -2768, 3227: 12345, 3229: 256, 3231: 1024, 3235: 256, 3255: 256}
+# binary header words as EDRTest208 writes them (see edr.BINARY_HEADER_WORDS), plus garbage in 3235
+BROKEN = {3221: -2768, 3223: -2768, 3227: 256, 3229: 1024, 3231: 256, 3235: 256, 3255: 256}
+FIXED = {3217: DT_US, 3219: DT_US, 3221: NS, 3223: NS, 3225: 5, 3227: 1, 3229: 1, 3231: 1, 3235: 0, 3255: 1}
 
 
 def text_binary_header():
@@ -154,7 +156,8 @@ def test_synthetic(work):
         assert np.array_equal(data, expected[comp]), comp
         assert np.array_equal(np.diff(times), np.full(39, 60_000_000)), comp
         hdr = parts[0][0]
-        assert struct.unpack(">H", hdr[3220:3222])[0] == NS and struct.unpack(">H", hdr[3216:3218])[0] == DT_US
+        found = {pos: struct.unpack(">h", hdr[pos - 1:pos + 1])[0] for pos in FIXED}
+        assert found == FIXED, f"{comp}: binary header {found}"
 
     # station 0002: minute 16:20 = 59 s zeros + first 1 s of the late export; later minutes shifted by 59 s
     _, _, h, times = read_segy(root / "0002/0.25hourChunks/0002_h_chunk0001_20260727T161500.segy")
@@ -365,11 +368,14 @@ def test_real(work, station_folder):
     daily = {c: next((station_folder / "DailyChunk").glob(f"{station}_{c}_chunk0000_*.segy")) for c in core.OUTPUT_COMPONENTS}
     for comp in core.OUTPUT_COMPONENTS:
         d_hdr, d_th, d_data, _ = read_segy_head(daily[comp], n_traces)
-        files = sorted((root / station / "HourlyChunk").glob(f"{station}_{comp}_*.segy"))
+        files = sorted((root / station / core.segment_label(1)).glob(f"{station}_{comp}_*.segy"))
         assert len(files) == 3, files
         for k, f in enumerate(files):
             hdr, th, data, _ = read_segy(f)
-            assert hdr == d_hdr, f"{comp}: file header differs"
+            found = {pos: struct.unpack(">h", hdr[pos - 1:pos + 1])[0] for pos in FIXED}
+            assert found == FIXED, f"{comp}: binary header {found}"
+            # the notebooks wrote 3235 = 1 (sweep frequency, a wrong byte position); everything else must match
+            assert hdr[:3234] + hdr[3236:] == d_hdr[:3234] + d_hdr[3236:], f"{comp}: file header differs"
             th_cmp, d_th_k = th.copy(), d_th[60 * k:60 * (k + 1)].copy()
             th_cmp[:, 0:8] = 0                                     # trace numbers restart per file
             d_th_k[:, 0:8] = 0
